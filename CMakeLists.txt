@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   gazebo_ros 
   geometry_msgs 
   turtlesim
+  gazebo_msgs
 )
 
 # Depend on system install of Gazebo
@@ -25,6 +26,7 @@ catkin_package(
   DEPENDS 
     roscpp 
     gazebo_ros 
+    gazebo_msgs
 )
 
 add_executable(pubvel src/pubvel.cpp)

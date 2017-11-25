@@ -1,6 +1,8 @@
 <?xml version="1.0" ?>
 <sdf version="1.4">
   <world name="default">
+    
+    <!-- Ground Plane -->
     <include>
       <uri>model://ground_plane</uri>
     </include>
@@ -8,8 +10,74 @@
     <include>
       <uri>model://sun</uri>
     </include>
+    
+    <model name="box1">
+      <pose>5 0 0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+        </collision>
 
-    <!-- reference to your plugin -->
-    <plugin name="gazebo_tutorials" filename="libgazebo_tutorials.so"/>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+        </visual>
+      </link>
+      <plugin name="gazebo_tutorials" filename="libgazebo_tutorials.so"/>
+    </model>
+    
+    <model name="box2">
+      <pose>-2.5 4.33 0 0 0 2.0944</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+        </visual>
+      </link>
+      <plugin name="gazebo_tutorials" filename="libgazebo_tutorials.so"/>
+    </model>
+    
+    <model name="box3">
+      <pose>-2.5 -4.33 0 0 0 -2.0944</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+        </visual>
+      </link>
+      <plugin name="gazebo_tutorials" filename="libgazebo_tutorials.so"/>
+    </model>
+      <!-- reference to your plugin -->
+      <!-- <plugin name="gazebo_tutorials" filename="libgazebo_tutorials.so"/> 
+    </model> -->
   </world>
 </sdf>
