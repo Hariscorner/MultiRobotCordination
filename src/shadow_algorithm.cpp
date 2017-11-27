@@ -8,9 +8,11 @@
 #include "turtlesim/Pose.h"		
 #include <limits.h>
 #include "geometry_msgs/Twist.h"
+#include "geometry_msgs/Pose2D.h"
 #include <boost/assign/list_of.hpp>
 #include <gazebo_msgs/ModelState.h>
 #include "gazebo_msgs/GetModelState.h" 
+#include <tf/transform_datatypes.h>
 
 using namespace std;
 #define NROBOT 3
@@ -22,10 +24,12 @@ using namespace std;
 #define isNear(X, A) ( ((X > (A - TOLERANCE)) && ( X < (A + TOLERANCE))) )
 
 double constrainAngle(double x);
+double getYawAngle(gazebo_msgs::GetModelState getmodelstate[], int m);
 void rotate_world(turtlesim::Pose TPose[], double del_angle);
 void evalcoeffs(double h[NROBOT][NROBOT], double k[NROBOT][NROBOT],  turtlesim::Pose TPose[]);
 //void spawn_my_turtles(ros::NodeHandle& nh, turtlesim::Spawn::Request req[], turtlesim::Spawn::Response resp[]);
-void currPoseCallback(const turtlesim::Pose::ConstPtr& msg, int id, turtlesim::Pose TPose[]);
+void getCurrState(gazebo_msgs::GetModelState getmodelstate[], int m, gazebo_msgs::ModelState state[]);
+
 void optimizeme(IloModel model, IloNumVarArray var, IloRangeArray con, geometry_msgs::Twist cmdVel[], double Vinit[]);
 static void populatebyrow (IloModel model, IloNumVarArray x, IloRangeArray c, turtlesim::Pose TPose[], double h[NROBOT][NROBOT], double k[NROBOT][NROBOT], double max_vel, double min_vel, double Vinit[]);
 	   
@@ -33,15 +37,19 @@ int main(int argc, char **argv) {
 	
 	ros::init(argc, argv, "defaultnode");
 	ros::NodeHandle nh;
-	ros::Subscriber curr_pose_sub[NROBOT];
-	ros::Publisher turtle_vel_pub[NROBOT];
+	
+	tf::Pose pose;
+	double yaw_angle;
+	
+	//ros::Subscriber curr_pose_sub[NROBOT];
+	//ros::Publisher turtle_vel_pub[NROBOT];
 	
 	double max_vel,min_vel,Vinit[NROBOT], pub_rate, h[NROBOT][NROBOT], k[NROBOT][NROBOT];
-	
+	geometry_msgs::Pose2D TPose[NROBOT];
 	geometry_msgs::Twist cmdVel[NROBOT];
-	turtlesim::Spawn::Request req[NROBOT];
-	turtlesim::Spawn::Response resp[NROBOT];
-	turtlesim::Pose TPose[NROBOT];
+	//turtlesim::Spawn::Request req[NROBOT];
+	//turtlesim::Spawn::Response resp[NROBOT];
+	//turtlesim::Pose TPose[NROBOT];
 	
 	ros::param::get("pubrate",	pub_rate);
 	ros::param::get("maxvel",	max_vel);
@@ -49,12 +57,12 @@ int main(int argc, char **argv) {
 	
 	ros::Rate my_rate(pub_rate);
 	
-	spawn_my_turtles();	//spawn both the turtles and initiate their pose and check if the spawnings were successful
+	//spawn_my_turtles();	//spawn both the turtles and initiate their pose and check if the spawnings were successful
 	
-		ros::Publisher pub=nh.advertise<gazebo_msgs::ModelState>("gazebo/set_model_state", 1000);
+	ros::Publisher pub=nh.advertise<gazebo_msgs::ModelState>("gazebo/set_model_state", 1000);
 	gazebo_msgs::ModelState msg[NROBOT];
 	
-		ros::ServiceClient gms_c = nh.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state");
+	ros::ServiceClient gms_c = nh.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state");
     gazebo_msgs::GetModelState getmodelstate[NROBOT];
 	
 	msg[0].model_name="myrobot1";
@@ -68,36 +76,21 @@ int main(int argc, char **argv) {
 
 	
 	for (int m=0; m<NROBOT; ++m) {
-		gms_c.call(getmodelstate[0]);
-		
-		msg[m].pose.position.x=getmodelstate[m].response.pose.position.x;
-		msg[m].pose.position.y=getmodelstate[m].response.pose.position.y;
-		msg[m].pose.position.z=getmodelstate[m].response.pose.position.z;
-		msg[m].pose.orientation.x=getmodelstate[m].response.pose.orientation.x;
-		msg[m].pose.orientation.y=getmodelstate[m].response.pose.orientation.y;
-		msg[m].pose.orientation.z=getmodelstate[m].response.pose.orientation.z;
-		msg[m].pose.orientation.w=getmodelstate[m].response.pose.orientation.w;
-			
-		Vinit[m]=max_vel;
-		msg[m].twist.linear.x=Vinit[m];
-		msg[m].twist.linear.y=0;
-		msg[m].twist.linear.z=0;
-		msg[m].twist.angular.x=0;
-		msg[m].twist.angular.y=0;
-		msg[m].twist.angular.z=0;
-		
+		gms_c.call(getmodelstate[m]);
+		getCurrState(getmodelstate, m, state);
 		pub.publish(msg[m]);
+	RPose.x		= 
+	RPose.y		=
+	RPose.theta	=	
 	}
 	
 	
 	//..........................Corrections to be applied from here onwards.................................................
 	
 	//cmake and package.xml are already configured for this file...find it in Dummy/Dummy3 folder in desktop
+	//also add tf to it 
 	
-	
-	
-	
-	
+
 	
 	
 	sleep(1);
@@ -108,7 +101,7 @@ int main(int argc, char **argv) {
 	IloNumVarArray var(env);	//create modelling variables
 	IloRangeArray con(env);		//create range objects for defining constraints
 	
-	evalcoeffs(h,k,TPose);				//calculates the coefficients of the constraint eqns etc
+	evalcoeffs(h,k,state);				//calculates the coefficients of the constraint eqns etc
 	populatebyrow (model, var, con, TPose,h,k, max_vel,min_vel,Vinit );	//populate the model
 	cout<<"Pose before optimisation\n";
 	cout<<"TPose.x\t= " << TPose[0].x;
@@ -232,10 +225,10 @@ void optimizeme(IloModel model, IloNumVarArray var, IloRangeArray con, geometry_
    	}//end of try catch
 }
 
-void evalcoeffs(double h[NROBOT][NROBOT], double k[NROBOT][NROBOT], turtlesim::Pose TPose[]) {
+void evalcoeffs(double h[NROBOT][NROBOT], double k[NROBOT][NROBOT], geometry_msgs::Pose2D TPose[]) {
 	
 	double safe_dia, alpha, A[NROBOT][NROBOT], w[NROBOT][NROBOT], l[NROBOT][NROBOT], r[NROBOT][NROBOT];
-	
+			
 	ros::param::get("safedia",	safe_dia);
 	
 	for(int i=0; i<NROBOT; ++i) {
@@ -380,16 +373,40 @@ void spawn_my_turtles() {
 }
 */
 
-void currPoseCallback(const turtlesim::Pose::ConstPtr& msg, int id, turtlesim::Pose TPose[]) {
-	TPose[id].x 		= msg->x;
-	TPose[id].y 		= msg->y;
-	TPose[id].theta 	= constrainAngle(msg->theta);
-// 	cout<<"TPose.x\t= " << TPose[id].x;
-// 	cout<<"\tTPose.y\t= " << TPose[id].y;
-// 	cout<<"\tTPose.theta\t=" << TPose[id].theta*180/M_PI<<endl;
+void getCurrState(gazebo_msgs::GetModelState getmodelstate[], int m, gazebo_msgs::ModelState state[]) {
+
+	double yaw_angle;
+	
+	state[m].pose.position.x=getmodelstate[m].response.pose.position.x;
+	state[m].pose.position.y=getmodelstate[m].response.pose.position.y;
+	state[m].pose.position.z=getmodelstate[m].response.pose.position.z;
+	state[m].pose.orientation.x=getmodelstate[m].response.pose.orientation.x;
+	state[m].pose.orientation.y=getmodelstate[m].response.pose.orientation.y;
+	state[m].pose.orientation.z=getmodelstate[m].response.pose.orientation.z;
+	state[m].pose.orientation.w=getmodelstate[m].response.pose.orientation.w;
+	
+	yaw_angle = getYawAngle(getmodelstate,m);
+
+	state[m].twist.linear.x=3*cos(yaw_angle);
+	state[m].twist.linear.y=3*sin(yaw_angle);
+	state[m].twist.linear.z=0;
+	state[m].twist.angular.x=0;
+	state[m].twist.angular.y=0;
+	state[m].twist.angular.z=0;
+
+	ROS_INFO_STREAM("sending_vel_command:"<<"_linear="<<state[m].twist.linear.x<<"_angular="<<state[m].twist.linear.y);
 	return;
 }
 
+double getYawAngle(gazebo_msgs::GetModelState getmodelstate[], int m){
+	tf::Pose pose;
+	double yaw_angle;
+	tf::poseMsgToTF(getmodelstate[m].response.pose, pose);
+	yaw_angle = tf::getYaw(pose.getRotation());
+	yaw_angle = constrainAngle(yaw_angle + M_PI);
+	
+	return yaw_angle;
+}
 double constrainAngle(double x){		//Normalize to [-180,180)
     x = fmod(x+M_PI,2*M_PI);
     if (x < 0)

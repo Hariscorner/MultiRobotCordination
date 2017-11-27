@@ -9,6 +9,7 @@
 #define NROBOT 3
 
 double constrainAngle(double x);
+double getYawAngle(gazebo_msgs::GetModelState getmodelstate[], int m);
 void getCurrState(gazebo_msgs::GetModelState getmodelstate[], int m, gazebo_msgs::ModelState state[]);
 
 int main(int argc, char **argv){
@@ -54,16 +55,8 @@ int main(int argc, char **argv){
 		}
 }
 
-double constrainAngle(double x){		//Normalize to [-180,180)
-    x = fmod(x+M_PI,2*M_PI);
-    if (x < 0)
-        x += 2*M_PI;
-    return x - M_PI;
-}
-
 void getCurrState(gazebo_msgs::GetModelState getmodelstate[], int m, gazebo_msgs::ModelState state[]) {
 
-	tf::Pose pose;
 	double yaw_angle;
 	
 	state[m].pose.position.x=getmodelstate[m].response.pose.position.x;
@@ -74,10 +67,7 @@ void getCurrState(gazebo_msgs::GetModelState getmodelstate[], int m, gazebo_msgs
 	state[m].pose.orientation.z=getmodelstate[m].response.pose.orientation.z;
 	state[m].pose.orientation.w=getmodelstate[m].response.pose.orientation.w;
 
-	tf::poseMsgToTF(getmodelstate[m].response.pose, pose);
-	yaw_angle = tf::getYaw(pose.getRotation());
-	yaw_angle = constrainAngle(yaw_angle + M_PI);
-	//ROS_INFO_STREAM("yaw (" <<m << ") : " <<yaw_angle);
+	yaw_angle = getYawAngle(getmodelstate,m);
 
 	state[m].twist.linear.x=3*cos(yaw_angle);
 	state[m].twist.linear.y=3*sin(yaw_angle);
@@ -88,4 +78,21 @@ void getCurrState(gazebo_msgs::GetModelState getmodelstate[], int m, gazebo_msgs
 
 	ROS_INFO_STREAM("sending_vel_command:"<<"_linear="<<state[m].twist.linear.x<<"_angular="<<state[m].twist.linear.y);
 	return;
+}
+
+double getYawAngle(gazebo_msgs::GetModelState getmodelstate[], int m){
+	tf::Pose pose;
+	double yaw_angle;
+	tf::poseMsgToTF(getmodelstate[m].response.pose, pose);
+	yaw_angle = tf::getYaw(pose.getRotation());
+	yaw_angle = constrainAngle(yaw_angle + M_PI);
+	
+	return yaw_angle;
+}
+
+double constrainAngle(double x){		//Normalize to [-180,180)
+    x = fmod(x+M_PI,2*M_PI);
+    if (x < 0)
+        x += 2*M_PI;
+    return x - M_PI;
 }
