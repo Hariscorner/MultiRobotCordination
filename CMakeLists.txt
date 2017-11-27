@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs 
   turtlesim
   gazebo_msgs
+  tf
 )
 
 # Depend on system install of Gazebo

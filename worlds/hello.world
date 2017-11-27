@@ -11,7 +11,7 @@
       <uri>model://sun</uri>
     </include>
     
-    <model name="box1">
+    <model name="myrobot1">
       <pose>5 0 0 0 0 0</pose>
       <link name="link">
         <collision name="collision">
@@ -33,7 +33,7 @@
       <plugin name="gazebo_tutorials" filename="libgazebo_tutorials.so"/>
     </model>
     
-    <model name="box2">
+    <model name="myrobot2">
       <pose>-2.5 4.33 0 0 0 2.0944</pose>
       <link name="link">
         <collision name="collision">
@@ -55,7 +55,7 @@
       <plugin name="gazebo_tutorials" filename="libgazebo_tutorials.so"/>
     </model>
     
-    <model name="box3">
+    <model name="myrobot3">
       <pose>-2.5 -4.33 0 0 0 -2.0944</pose>
       <link name="link">
         <collision name="collision">
