@@ -3,10 +3,10 @@
     <arg name="world_name" value="$(find gazebo_tutorials)/worlds/hello.world"/>
   </include>
 
-	<node pkg="gazebo_tutorials" type="pubvel" name="mypub_vel" output="screen"></node> 
+	 <!-- <node pkg="gazebo_tutorials" type="pubvel" name="mypub_vel" output="screen"></node>     -->
 	
-	<!--
-	<param name="safedia" value="1" />
+
+	<param name="safedia" value="2" />
 	<param name="pubrate" value="4" />
 	<param name="maxvel" value="10" />
 	
@@ -14,5 +14,4 @@
 		<rosparam command="load" file="/home/hari/test_ws/src/gazebo_tutorials/params/params6.yaml" />
 	</node>
 
--->
 </launch>

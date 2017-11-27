@@ -25,74 +25,67 @@ using namespace std;
 
 double constrainAngle(double x);
 double getYawAngle(gazebo_msgs::ModelState state[], int m);
-void getCurrState(gazebo_msgs::GetModelState getmodelstate[], int m, gazebo_msgs::ModelState state[]);
+void getCurrState(ros::ServiceClient& gms_c, gazebo_msgs::GetModelState getmodelstate[], int m, gazebo_msgs::ModelState state[]);
+void reverseTransformVelocity(ros::ServiceClient& gms_c, gazebo_msgs::GetModelState getmodelstate[], geometry_msgs::Twist cmd_vel[], int m, gazebo_msgs::ModelState state[]);
+void forwardTransformVelocity(gazebo_msgs::ModelState state[], int m, geometry_msgs::Twist cmd_vel[]);
 
 
-void rotate_world(turtlesim::Pose TPose[], double del_angle);
-void evalcoeffs(double h[NROBOT][NROBOT], double k[NROBOT][NROBOT],  turtlesim::Pose TPose[]);
+void rotate_world(geometry_msgs::Pose2D TPose[], double del_angle);
+void evalcoeffs(double h[NROBOT][NROBOT], double k[NROBOT][NROBOT],  geometry_msgs::Pose2D TPose[]);
 //void spawn_my_turtles(ros::NodeHandle& nh, turtlesim::Spawn::Request req[], turtlesim::Spawn::Response resp[]);
 
-void optimizeme(IloModel model, IloNumVarArray var, IloRangeArray con, geometry_msgs::Twist cmdVel[], double Vinit[]);
-static void populatebyrow (IloModel model, IloNumVarArray x, IloRangeArray c, turtlesim::Pose TPose[], double h[NROBOT][NROBOT], double k[NROBOT][NROBOT], double max_vel, double min_vel, double Vinit[]);
+void optimizeme(IloModel model, IloNumVarArray var, IloRangeArray con, geometry_msgs::Twist cmd_vel[], double Vinit[]);
+static void populatebyrow (IloModel model, IloNumVarArray x, IloRangeArray c, geometry_msgs::Pose2D TPose[], double h[NROBOT][NROBOT], double k[NROBOT][NROBOT], double max_vel, double min_vel, double Vinit[]);
 	   
 int main(int argc, char **argv) {
 	
 	ros::init(argc, argv, "defaultnode");
 	ros::NodeHandle nh;
 	
-	tf::Pose pose;
-	double yaw_angle;
-	
-	//ros::Subscriber curr_pose_sub[NROBOT];
-	//ros::Publisher turtle_vel_pub[NROBOT];
-	
 	double max_vel,min_vel,Vinit[NROBOT], pub_rate, h[NROBOT][NROBOT], k[NROBOT][NROBOT];
-	geometry_msgs::Pose2D TPose[NROBOT];
-	geometry_msgs::Twist cmdVel[NROBOT];
-	//turtlesim::Spawn::Request req[NROBOT];
-	//turtlesim::Spawn::Response resp[NROBOT];
-	//turtlesim::Pose TPose[NROBOT];
+	geometry_msgs::Pose2D RPose[NROBOT];
+	geometry_msgs::Twist cmd_vel[NROBOT];
 	
 	ros::param::get("pubrate",	pub_rate);
 	ros::param::get("maxvel",	max_vel);
-	ros::param::get("minvel",	min_vel);
+	//ros::param::get("minvel",	min_vel);
 	
 	ros::Rate my_rate(pub_rate);
 	
 	//spawn_my_turtles();	//spawn both the turtles and initiate their pose and check if the spawnings were successful
 	
 	ros::Publisher pub=nh.advertise<gazebo_msgs::ModelState>("gazebo/set_model_state", 1000);
-	gazebo_msgs::ModelState msg[NROBOT];
+	gazebo_msgs::ModelState state[NROBOT];
 	
 	ros::ServiceClient gms_c = nh.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state");
     gazebo_msgs::GetModelState getmodelstate[NROBOT];
 	
-	msg[0].model_name="myrobot1";
-	msg[1].model_name="myrobot2";
-	msg[2].model_name="myrobot3";
+	state[0].model_name="myrobot1";
+	state[1].model_name="myrobot2";
+	state[2].model_name="myrobot3";
 	
     getmodelstate[0].request.model_name="myrobot1";
 	getmodelstate[1].request.model_name="myrobot2";
 	getmodelstate[2].request.model_name="myrobot3";
-	
+	sleep(8); //wait until gazebo startsups
 
-	
+	ros::Rate rate(2);
+		
 	for (int m=0; m<NROBOT; ++m) {
-		gms_c.call(getmodelstate[m]);
-		getCurrState(getmodelstate, m, state);
-		pub.publish(msg[m]);
-	RPose.x		= 
-	RPose.y		=
-	RPose.theta	= getYawAngle(getmodelstate,m);
-	}
-	
-	
-	//..........................Corrections to be applied from here onwards.................................................
-	
-	//cmake and package.xml are already configured for this file...find it in Dummy/Dummy3 folder in desktop
-	//also add tf to it 
-	
+		getCurrState(gms_c, getmodelstate, m, state);
+		
+		RPose[m].x		= state[m].pose.position.x;
+		RPose[m].y		= state[m].pose.position.y;
+		RPose[m].theta	= getYawAngle(state,m);
 
+		cmd_vel[m].linear.x=5;		//set initial velocity
+		reverseTransformVelocity(gms_c, getmodelstate,cmd_vel,m,state);	//sets the reverse_trasnformed velocity in new_state
+		//pub.publish(state[m]);
+			cout<<"Pose before optimisation\n";
+			cout<<"TPose.x\t= " << RPose[m].x;
+			cout<<"\tTPose.y\t= " << RPose[m].y;
+			cout<<"\tTPose.theta\t=" << RPose[m].theta*180/M_PI<<endl;
+	}	
 	
 	
 	sleep(1);
@@ -103,33 +96,33 @@ int main(int argc, char **argv) {
 	IloNumVarArray var(env);	//create modelling variables
 	IloRangeArray con(env);		//create range objects for defining constraints
 	
-	evalcoeffs(h,k,state);				//calculates the coefficients of the constraint eqns etc
-	populatebyrow (model, var, con, TPose,h,k, max_vel,min_vel,Vinit );	//populate the model
-	cout<<"Pose before optimisation\n";
-	cout<<"TPose.x\t= " << TPose[0].x;
-	cout<<"\tTPose.y\t= " << TPose[0].y;
-	cout<<"\tTPose.theta\t=" << TPose[0].theta*180/M_PI<<endl;
-	optimizeme(model,var,con, cmdVel, Vinit);	//the real optimisation happens here
+	evalcoeffs(h,k,RPose);				//calculates the coefficients of the constraint eqns etc
+	populatebyrow (model, var, con, RPose,h,k, max_vel,min_vel,Vinit );	//populate the model
+	optimizeme(model,var,con, cmd_vel, Vinit);	//the real optimisation happens here
 	
-	//cout<<"going to Publish now: \t"<<cmdVel.linear.x<<endl; 
-	//int i=1;
-	//&& i<8
+
+	
 	while(ros::ok() && nh.ok() ){
 		for (int a=0; a<NROBOT; ++a) {
-			turtle_vel_pub[a].publish(cmdVel[a]);
+			pub.publish(state[a]);
 		}
-		my_rate.sleep();
-		ros::spinOnce();
+		//my_rate.sleep();
+		//ros::spinOnce();
 		my_rate.sleep();
 		//++i;
+		for (int a=0; a<NROBOT; ++a) {
+			//turtle_vel_pub[a].publish(cmdVel[a]);
+			reverseTransformVelocity(gms_c, getmodelstate,cmd_vel,a,state);
+		}
 	}
+	
 	cout<<"done!"<<endl;
 	sleep(1000);
    	return 0;
 }	//END of main
 
 
-static void populatebyrow (IloModel model, IloNumVarArray x, IloRangeArray c, turtlesim::Pose TPose[], double h[NROBOT][NROBOT], double k[NROBOT][NROBOT], double max_vel, double min_vel, double Vinit[])
+static void populatebyrow (IloModel model, IloNumVarArray x, IloRangeArray c, geometry_msgs::Pose2D TPose[], double h[NROBOT][NROBOT], double k[NROBOT][NROBOT], double max_vel, double min_vel, double Vinit[])
 {
 	IloEnv env = model.getEnv();		//environment handle
 
@@ -180,7 +173,7 @@ static void populatebyrow (IloModel model, IloNumVarArray x, IloRangeArray c, tu
 }  // END populatebyrow
 
 
-void optimizeme(IloModel model, IloNumVarArray var, IloRangeArray con, geometry_msgs::Twist cmdVel[], double Vinit[]) {
+void optimizeme(IloModel model, IloNumVarArray var, IloRangeArray con, geometry_msgs::Twist cmd_vel[], double Vinit[]) {
 	IloEnv env = model.getEnv();
     try {
 		
@@ -215,7 +208,7 @@ void optimizeme(IloModel model, IloNumVarArray var, IloRangeArray con, geometry_
 		  		
 		cout<< "q1\t:" << vals[0] << "\tq2\t: " << vals[1] << endl;
 		for(int y=0; y< NROBOT; ++y) {
-			cmdVel[y].linear.x=Vinit[y]+vals[y];
+			cmd_vel[y].linear.x=Vinit[y]+vals[y];
 		}
 		
 	}
@@ -332,7 +325,7 @@ void evalcoeffs(double h[NROBOT][NROBOT], double k[NROBOT][NROBOT], geometry_msg
 
 }
 
-void rotate_world(turtlesim::Pose TPose[], double del_angle) {
+void rotate_world(geometry_msgs::Pose2D TPose[], double del_angle) {
   double tempx, tempy;
   del_angle=del_angle+0.01*del_angle;
   cout << "TPose is updated to: " <<endl;
@@ -375,10 +368,9 @@ void spawn_my_turtles() {
 }
 */
 
-void getCurrState(gazebo_msgs::GetModelState getmodelstate[], int m, gazebo_msgs::ModelState state[]) {
+void getCurrState(ros::ServiceClient& gms_c,gazebo_msgs::GetModelState getmodelstate[], int m, gazebo_msgs::ModelState state[]) {
 
-	double yaw_angle;
-	
+	gms_c.call(getmodelstate[m]);
 	state[m].pose.position.x=getmodelstate[m].response.pose.position.x;
 	state[m].pose.position.y=getmodelstate[m].response.pose.position.y;
 	state[m].pose.position.z=getmodelstate[m].response.pose.position.z;
@@ -386,19 +378,46 @@ void getCurrState(gazebo_msgs::GetModelState getmodelstate[], int m, gazebo_msgs
 	state[m].pose.orientation.y=getmodelstate[m].response.pose.orientation.y;
 	state[m].pose.orientation.z=getmodelstate[m].response.pose.orientation.z;
 	state[m].pose.orientation.w=getmodelstate[m].response.pose.orientation.w;
+	
+	state[m].twist.linear.x	=getmodelstate[m].response.twist.linear.x;
+	state[m].twist.linear.y	=getmodelstate[m].response.twist.linear.y;
+	state[m].twist.linear.z	=getmodelstate[m].response.twist.linear.z;
+	state[m].twist.angular.x=getmodelstate[m].response.twist.angular.x;
+	state[m].twist.angular.y=getmodelstate[m].response.twist.angular.y;
+	state[m].twist.angular.z=getmodelstate[m].response.twist.angular.z;
 
+	return;
+}
+
+void forwardTransformVelocity(gazebo_msgs::ModelState state[], int m, geometry_msgs::Twist cmd_vel[]){
+	
+	cmd_vel[m].linear.x	= hypot(state[m].twist.linear.x, state[m].twist.linear.y);
+	cmd_vel[m].linear.y	= 0;
+	cmd_vel[m].linear.z	= 0;
+	cmd_vel[m].angular.x	= 0;
+	cmd_vel[m].angular.y	= 0;
+	cmd_vel[m].angular.z	= 0;	
+	
+	//cout<<"cmd_vel[m].linear.x" << cmd_vel[m].linear.x << endl;
+}
+
+void reverseTransformVelocity(ros::ServiceClient& gms_c, gazebo_msgs::GetModelState getmodelstate[], geometry_msgs::Twist cmd_vel[], int m, gazebo_msgs::ModelState state[]){		
+	double yaw_angle;
+	
+	getCurrState(gms_c, getmodelstate, m, state);
+	
 	yaw_angle = getYawAngle(state,m);
-
-	state[m].twist.linear.x=3*cos(yaw_angle);
-	state[m].twist.linear.y=3*sin(yaw_angle);
+	state[m].twist.linear.x=cmd_vel[m].linear.x*cos(yaw_angle);
+	state[m].twist.linear.y=cmd_vel[m].linear.x*sin(yaw_angle);
 	state[m].twist.linear.z=0;
 	state[m].twist.angular.x=0;
 	state[m].twist.angular.y=0;
 	state[m].twist.angular.z=0;
-
-	ROS_INFO_STREAM("sending_vel_command:"<<"_linear="<<state[m].twist.linear.x<<"_angular="<<state[m].twist.linear.y);
-	return;
+	
+	//cout<<"state[m].twist.linear.x"<<state[m].twist.linear.x << endl;
+	//cout<<"state[m].twist.linear.y"<<state[m].twist.linear.y << endl;
 }
+
 
 double getYawAngle(gazebo_msgs::ModelState state[], int m){
 	tf::Pose pose;
