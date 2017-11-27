@@ -24,11 +24,13 @@ using namespace std;
 #define isNear(X, A) ( ((X > (A - TOLERANCE)) && ( X < (A + TOLERANCE))) )
 
 double constrainAngle(double x);
-double getYawAngle(gazebo_msgs::GetModelState getmodelstate[], int m);
+double getYawAngle(gazebo_msgs::ModelState state[], int m);
+void getCurrState(gazebo_msgs::GetModelState getmodelstate[], int m, gazebo_msgs::ModelState state[]);
+
+
 void rotate_world(turtlesim::Pose TPose[], double del_angle);
 void evalcoeffs(double h[NROBOT][NROBOT], double k[NROBOT][NROBOT],  turtlesim::Pose TPose[]);
 //void spawn_my_turtles(ros::NodeHandle& nh, turtlesim::Spawn::Request req[], turtlesim::Spawn::Response resp[]);
-void getCurrState(gazebo_msgs::GetModelState getmodelstate[], int m, gazebo_msgs::ModelState state[]);
 
 void optimizeme(IloModel model, IloNumVarArray var, IloRangeArray con, geometry_msgs::Twist cmdVel[], double Vinit[]);
 static void populatebyrow (IloModel model, IloNumVarArray x, IloRangeArray c, turtlesim::Pose TPose[], double h[NROBOT][NROBOT], double k[NROBOT][NROBOT], double max_vel, double min_vel, double Vinit[]);
@@ -81,7 +83,7 @@ int main(int argc, char **argv) {
 		pub.publish(msg[m]);
 	RPose.x		= 
 	RPose.y		=
-	RPose.theta	=	
+	RPose.theta	= getYawAngle(getmodelstate,m);
 	}
 	
 	
@@ -384,8 +386,8 @@ void getCurrState(gazebo_msgs::GetModelState getmodelstate[], int m, gazebo_msgs
 	state[m].pose.orientation.y=getmodelstate[m].response.pose.orientation.y;
 	state[m].pose.orientation.z=getmodelstate[m].response.pose.orientation.z;
 	state[m].pose.orientation.w=getmodelstate[m].response.pose.orientation.w;
-	
-	yaw_angle = getYawAngle(getmodelstate,m);
+
+	yaw_angle = getYawAngle(state,m);
 
 	state[m].twist.linear.x=3*cos(yaw_angle);
 	state[m].twist.linear.y=3*sin(yaw_angle);
@@ -398,15 +400,16 @@ void getCurrState(gazebo_msgs::GetModelState getmodelstate[], int m, gazebo_msgs
 	return;
 }
 
-double getYawAngle(gazebo_msgs::GetModelState getmodelstate[], int m){
+double getYawAngle(gazebo_msgs::ModelState state[], int m){
 	tf::Pose pose;
 	double yaw_angle;
-	tf::poseMsgToTF(getmodelstate[m].response.pose, pose);
+	tf::poseMsgToTF(state[m].pose, pose);
 	yaw_angle = tf::getYaw(pose.getRotation());
 	yaw_angle = constrainAngle(yaw_angle + M_PI);
 	
 	return yaw_angle;
 }
+
 double constrainAngle(double x){		//Normalize to [-180,180)
     x = fmod(x+M_PI,2*M_PI);
     if (x < 0)

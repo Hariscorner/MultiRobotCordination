@@ -9,7 +9,7 @@
 #define NROBOT 3
 
 double constrainAngle(double x);
-double getYawAngle(gazebo_msgs::GetModelState getmodelstate[], int m);
+double getYawAngle(gazebo_msgs::ModelState state[], int m);
 void getCurrState(gazebo_msgs::GetModelState getmodelstate[], int m, gazebo_msgs::ModelState state[]);
 
 int main(int argc, char **argv){
@@ -67,7 +67,7 @@ void getCurrState(gazebo_msgs::GetModelState getmodelstate[], int m, gazebo_msgs
 	state[m].pose.orientation.z=getmodelstate[m].response.pose.orientation.z;
 	state[m].pose.orientation.w=getmodelstate[m].response.pose.orientation.w;
 
-	yaw_angle = getYawAngle(getmodelstate,m);
+	yaw_angle = getYawAngle(state,m);
 
 	state[m].twist.linear.x=3*cos(yaw_angle);
 	state[m].twist.linear.y=3*sin(yaw_angle);
@@ -80,10 +80,10 @@ void getCurrState(gazebo_msgs::GetModelState getmodelstate[], int m, gazebo_msgs
 	return;
 }
 
-double getYawAngle(gazebo_msgs::GetModelState getmodelstate[], int m){
+double getYawAngle(gazebo_msgs::ModelState state[], int m){
 	tf::Pose pose;
 	double yaw_angle;
-	tf::poseMsgToTF(getmodelstate[m].response.pose, pose);
+	tf::poseMsgToTF(state[m].pose, pose);
 	yaw_angle = tf::getYaw(pose.getRotation());
 	yaw_angle = constrainAngle(yaw_angle + M_PI);
 	
