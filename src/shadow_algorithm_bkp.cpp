@@ -23,15 +23,6 @@ using namespace std;
 // #define TOLERANCE 0*M_PI/180
 #define isNear(X, A) ( ((X > (A - TOLERANCE)) && ( X < (A + TOLERANCE))) )
 
-struct OurRobots {
-	
-	std::string name;
-	double x=0;
-	double y=0;
-	double theta=0;
-	
-};
-
 double constrainAngle(double x);
 double getYawAngle(gazebo_msgs::ModelState state[], int m);
 void getCurrState(ros::ServiceClient& gms_c, gazebo_msgs::GetModelState getmodelstate[], int m, gazebo_msgs::ModelState state[]);
@@ -41,7 +32,7 @@ void forwardTransformVelocity(gazebo_msgs::ModelState state[], int m, geometry_m
 
 void rotate_world(geometry_msgs::Pose2D TPose[], double del_angle);
 void evalcoeffs(double h[NROBOT][NROBOT], double k[NROBOT][NROBOT],  geometry_msgs::Pose2D TPose[]);
-void setup_our_robots(ros::NodeHandle& nh, OurRobots tuples[]);
+//void spawn_my_turtles(ros::NodeHandle& nh, turtlesim::Spawn::Request req[], turtlesim::Spawn::Response resp[]);
 
 void optimizeme(IloModel model, IloNumVarArray var, IloRangeArray con, geometry_msgs::Twist cmd_vel[], double Vinit[]);
 static void populatebyrow (IloModel model, IloNumVarArray x, IloRangeArray c, geometry_msgs::Pose2D TPose[], double h[NROBOT][NROBOT], double k[NROBOT][NROBOT], double max_vel, double min_vel, double Vinit[]);
@@ -60,17 +51,9 @@ int main(int argc, char **argv) {
 	//ros::param::get("minvel",	min_vel);
 	
 	ros::Rate my_rate(pub_rate);
-	OurRobots tuples[NROBOT];
-	setup_our_robots(nh,tuples);
-
 	
-	for (int m=0; m<NROBOT; ++m) {
-		curr_pose_sub[m] 	= nh.subscribe<turtlesim::Pose>("/"+req[m].name+"/pose", 2, boost::bind(currPoseCallback, _1,m, TPose));	// subscriber objects to get current pose of each turtle
-		turtle_vel_pub[m] 	= nh.advertise<geometry_msgs::Twist>("/"+req[m].name+"/cmd_vel", 2);	//publisher objects to publish the command velocity
-		Vinit[m]		= max_vel;	//set the initial velocity of the robots to max
-		cmdVel[m].linear.x	= Vinit[m];
-		turtle_vel_pub[m].publish(cmdVel[m]); //publish the velocity of all turtles once
-	}
+	//spawn_my_turtles();	//spawn both the turtles and initiate their pose and check if the spawnings were successful
+	
 	ros::Publisher pub=nh.advertise<gazebo_msgs::ModelState>("gazebo/set_model_state", 1000);
 	gazebo_msgs::ModelState state[NROBOT];
 	
@@ -360,20 +343,19 @@ void rotate_world(geometry_msgs::Pose2D TPose[], double del_angle) {
   //sleep(10);
 }
 
-
-void setup_our_robots(ros::NodeHandle& nh, OurRobots tuples[]) {
+/*
+void spawn_my_turtles() {
 	//spawn two turtles
 	//ros::service::waitForService("spawn");
 	//ros::ServiceClient spawNROBOT = nh.serviceClient<turtlesim::Spawn>("spawn");
 	
-	//double x=5.5, y=5.5, p=0, r=5.5;
+	double x=5.5, y=5.5, p=0, r=5.5;
 
 	for (int j=0; j<NROBOT; ++j) {
-		tuples[j].name="robot";
-		tuples[j].name += std::to_string(j+1);	//append UID to the end of "myturtle" eg: myturtle3
-		/*
+		req[j].name="myrobot";
+		req[j].name += std::to_string(j+1);	//append UID to the end of "myturtle" eg: myturtle3
 		p=OFFSET+j*2*M_PI/NROBOT;	
-		p=j*2*M_PI/NROBOT;		//divide 360 equally into "NROBOT parts
+		//p=j*2*M_PI/NROBOT;		//divide 360 equally into "NROBOT parts
 		req[j].x=x+r*cos(p);
 		req[j].y=y+r*sin(p);
 		req[j].theta=M_PI+p;
@@ -381,10 +363,10 @@ void setup_our_robots(ros::NodeHandle& nh, OurRobots tuples[]) {
 		bool success=spawNROBOT.call(req[j],resp[j]);
 		if(success) { ROS_INFO_STREAM ("Spawned turtle\t:" << j ); }
 		else { ROS_INFO_STREAM ("Error, unable to spawn turtle"); }
-		*/
+		
 	}
 }
-
+*/
 
 void getCurrState(ros::ServiceClient& gms_c,gazebo_msgs::GetModelState getmodelstate[], int m, gazebo_msgs::ModelState state[]) {
 

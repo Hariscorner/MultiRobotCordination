@@ -1,0 +1,90 @@
+<?xml version="1.0"?>
+<robot>
+<!-- <turnGravityOff>true</turnGravityOff> -->
+  <!-- ros_control plugin -->
+  <gazebo>
+    <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so"></plugin>
+  </gazebo>
+	
+	<gazebo>
+		<plugin name="model_push" filename="libmodel_push.so"/>
+	</gazebo>
+
+<!--
+  <gazebo>
+    <plugin name="steer_drive_controller" filename="libgazebo_ros_steer_drive.so">
+      <alwaysOn>true</alwaysOn>
+      <updateRate>100</updateRate>
+      <steerJoint>base2steer_joint</steerJoint>
+      <driveJoint>steer2sd_wheel_joint</driveJoint>
+      <fixedWheelLeftJoint>base2fixed_left_wheel_joint</fixedWheelLeftJoint>
+      <fixedWheelRightJoint>base2fixed_right_wheel_joint</fixedWheelRightJoint>
+
+      <wheelDiameter>0.16</wheelDiameter>
+      <steeringFixWheelDistanceX>1.190</steeringFixWheelDistanceX>
+      <steeringFixWheelDistanceY>0.0</steeringFixWheelDistanceY>
+      
+      <steerTorque>1000</steerTorque>
+      <driveTorque>1000</driveTorque>
+
+      <commandTopic>controller/cmd_vel</commandTopic>
+      <odometryTopic>odom</odometryTopic>
+      <odometryFrame>/world</odometryFrame>
+      <robotBaseFrame>base_footprint</robotBaseFrame>
+
+      <odomEncSteeringAngleOffset>0.01</odomEncSteeringAngleOffset> -->
+ 
+      <!--odometrySource>encoder</odometrySource-->
+      <!--
+
+      <publishWheelJointState>true</publishWheelJointState>
+    </plugin>
+  </gazebo>
+
+ -->
+
+  
+  <gazebo reference="steer_link">
+    <material>Gazebo/Orange</material>
+  </gazebo>
+
+  <gazebo reference="base_link" >
+    <material>Gazebo/Red</material>
+  </gazebo>
+
+  <gazebo reference="left_fork" >
+    <material>Gazebo/Grey</material>
+  </gazebo>
+
+  <gazebo reference="right_fork" >
+    <material>Gazebo/Grey</material>
+  </gazebo>
+
+  <gazebo reference="fixed_left_wheel_link" >
+<!--    <mu1 value="10000.0" />
+    <mu2 value="10000.0" />
+    <kp  value="10000000000.0" />
+    <kd  value="1.0" /> -->
+    <material>Gazebo/Black</material>
+  </gazebo>
+
+  <gazebo reference="fixed_right_wheel_link" >
+<!--    <mu1 value="10000.0" />
+    <mu2 value="10000.0" />
+    <kp  value="10000000000.0" />
+    <kd  value="1.0" /> -->
+    <material>Gazebo/Black</material>
+  </gazebo>
+
+  <gazebo reference="sd_wheel_link" >
+<!--    <mu1 value="10000.0" />
+    <mu2 value="10000.0" />
+    <kp  value="10000000000.0" />
+    <kd  value="1.0" /> -->
+    <material>Gazebo/Black</material>
+  </gazebo>
+     
+
+
+</robot>
+

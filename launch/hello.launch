@@ -14,4 +14,6 @@
 		<rosparam command="load" file="/home/hari/test_ws/src/gazebo_tutorials/params/params6.yaml" />
 	</node>
 
+	<!-- <include file="$(find gazebo_tutorials)/launch/truck.launch"/> -->
+	<!-- <include file="$(find cititruck_gazebo)/launch/cititrucks_empty.launch"/>  -->
 </launch>
