@@ -1,0 +1,64 @@
+<launch>
+
+  <include file="$(find gazebo_ros)/launch/empty_world.launch"/>
+
+  <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find gazebo_tutorials)/urdf/cititruck.xacro'" />
+
+  <group ns="robot1">
+    <param name="tf_prefix" value="robot1" />
+    <include file="$(find gazebo_tutorials)/launch/cititruck.launch">
+      <arg name="robot_pose_x" value="24.62"/> 
+      <arg name="robot_pose_y" value="4.3412"/>
+      <arg name="robot_pose_yaw" default="0.174533"/>
+      <arg name="robot_name" value="robot1" />
+    </include>
+  </group>
+
+  <group ns="robot2">
+    <param name="tf_prefix" value="robot2" />
+    <include file="$(find gazebo_tutorials)/launch/cititruck.launch">
+      <arg name="robot_pose_x" value="3.4793"/> 
+      <arg name="robot_pose_y" value="24.7567"/>
+      <arg name="robot_pose_yaw" default="1.43117"/>
+      <arg name="robot_name" value="robot2" />
+    </include>
+  </group>
+
+  <group ns="robot3">
+    <param name="tf_prefix" value="robot3" />
+    <include file="$(find gazebo_tutorials)/launch/cititruck.launch">
+      <arg name="robot_pose_x" value="-22.46"/> 
+      <arg name="robot_pose_y" value="10.9593"/>
+      <arg name="robot_pose_yaw" default="2.68781"/>
+      <arg name="robot_name" value="robot3" />
+    </include>
+  </group>
+
+  <group ns="robot4">
+    <param name="tf_prefix" value="robot4" />
+    <include file="$(find gazebo_tutorials)/launch/cititruck.launch">
+      <arg name="robot_pose_x" value="-17.366"/> 
+      <arg name="robot_pose_y" value="-17.983"/>
+      <arg name="robot_pose_yaw" default="-2.33874"/>
+      <arg name="robot_name" value="robot4" />
+    </include>
+  </group>
+	
+  <group ns="robot5">
+    <param name="tf_prefix" value="robot5" />
+    <include file="$(find gazebo_tutorials)/launch/cititruck.launch">
+      <arg name="robot_pose_x" value="11.737"/> 
+      <arg name="robot_pose_y" value="-22.074"/>
+      <arg name="robot_pose_yaw" default="-1.0821"/>
+      <arg name="robot_name" value="robot5" />
+    </include>
+  </group>
+	<param name="safedia" value="2" />
+	<param name="pubrate" value="4" />
+	<param name="maxvel" value="4" />
+	
+	<node pkg="gazebo_tutorials" type="shadow_algorithm_node" name="ourturtlenode" output="screen" launch-prefix="xterm -bg Teal -geometry 120x80+2000+10 -e"> 
+		<rosparam command="load" file="/home/hari/test_ws/src/gazebo_tutorials/params/params6.yaml" />
+	</node>
+	
+</launch>

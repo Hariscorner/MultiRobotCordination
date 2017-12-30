@@ -12,6 +12,10 @@
 #include "ros/subscribe_options.h"
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
+#include <tf/transform_broadcaster.h>
+#include "tf/transform_datatypes.h"
+//#include "LinearMath/btMatrix3x3.h"
+#include <geometry_msgs/Quaternion.h>
 
 namespace gazebo
 {
@@ -23,7 +27,7 @@ namespace gazebo
       this->model = _parent;
       gazebo_ros_ = GazeboRosPtr ( new GazeboRos ( _parent, _sdf, "model_push" ) );
 
-      this->robot_pose_pub 	= gazebo_ros_->node()->advertise<geometry_msgs::Pose2D>("curr_pose", 1000);	//publisher objects to publish the command velocity
+      this->robot_pose_pub 	= gazebo_ros_->node()->advertise<geometry_msgs::Pose2D>("pose", 1000);	//publisher objects to publish the command velocity
       ros::SubscribeOptions so_v = ros::SubscribeOptions::create<geometry_msgs::Twist> ( "cmd_vel", 1,
                                 boost::bind ( &ModelPush::currVelCallback, this, _1 ), ros::VoidPtr(), &queue_);
       curr_vel_sub = gazebo_ros_->node()->subscribe ( so_v );
@@ -41,25 +45,40 @@ namespace gazebo
     // Called by the world update start event
     public: void OnUpdate(const common::UpdateInfo & /*_info*/)
     {
+      //gazebo::math::Pose pose = this->model->gazebo::physics::ModelState::GetPose();
+      gazebo::math::Pose pose = this->model->GetWorldPose();
+      geometry_msgs::Quaternion g_quat;
+      g_quat.x=pose.rot.x;
+      g_quat.y=pose.rot.y;
+      g_quat.z=pose.rot.z;
+      g_quat.w=pose.rot.w;
+      
+      //ROS_INFO_STREAM("pose.pos.x: "<< pose.pos.x);
+      //ROS_INFO_STREAM("pose.pos.y: "<< pose.pos.y);
+      //ROS_INFO_STREAM("pose.pos.z: "<< pose.pos.z);
+      //ROS_INFO_STREAM("pose.rot.x: "<< pose.rot.x);
+      //ROS_INFO_STREAM("pose.rot.y: "<< pose.rot.y);
+      //ROS_INFO_STREAM("pose.rot.z: "<< pose.rot.z);
+      //ROS_INFO_STREAM("pose.rot.w: "<< pose.rot.w);
+      
+      
+      // the incoming geometry_msgs::Quaternion is transformed to a tf::Quaterion
+      tf::Quaternion quat;
+      tf::quaternionMsgToTF(g_quat, quat);
+
+      // the tf::Quaternion has a method to acess roll pitch and yaw
+      double roll, pitch, yaw;
+      tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
+      
+      curr_pose.x     = pose.pos.x;
+      curr_pose.y     = pose.pos.y;
+      curr_pose.theta = yaw;
+      
       //publish the current pose
       this->robot_pose_pub.publish(curr_pose);
       
       //update the velocity
-      this->model->SetLinearVel(math::Vector3(cmd_vel.linear.x, cmd_vel.linear.y, cmd_vel.linear.z));
-
-      //this->model->GetLinearVel(cmd_vel.linear);
-      //this->model->GetAngularVel(cmd_vel.angular);
-
-      //cmd_vel.linear.x=this->model->GetWorldLinearVel().x;
-      //cmd_vel.linear.y=this->model->GetWorldLinearVel().y;
-      //cmd_vel.linear.z=this->model->GetWorldLinearVel().z;
-      //cmd_vel.angular.z=this->model->GetWorldAngularVel().z;
-
-      //ROS_INFO_STREAM("cmd_vel.linear.x: "<<cmd_vel.linear.x);
-      //ROS_INFO_STREAM("cmd_vel.linear.y: "<<cmd_vel.linear.y);
-      //ROS_INFO_STREAM("cmd_vel.linear.z: "<<cmd_vel.linear.z);
-      //cmd_vel.linear.x=1;
-      //cmd_vel.linear.y=1;
+      this->model->SetLinearVel(math::Vector3(-cmd_vel.linear.x*cos(yaw),-cmd_vel.linear.x*sin(yaw), 0));
 
     }
     
